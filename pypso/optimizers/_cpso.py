@@ -1,12 +1,13 @@
+import logging
 from multiprocessing import Pool
 import numpy as np
-from typing import Any, Callable, Dict, Iterable, Optional
+from typing import Any, Callable, Dict, Iterable, Optional, Tuple
 
 # Package imports
 from ..base import BasePSO
 
-
 __all__ = ['CPSO']
+_LOGGER = logging.getLogger(__name__)
 
 
 class CPSO(BasePSO):
@@ -62,11 +63,10 @@ class CPSO(BasePSO):
                  ub: Optional[Iterable[float]] = None,
                  fcons: Optional[Callable[..., Any]] = None,
                  kwargs: Dict[Any, Any] = {},
-                 omega: float = 0.5,
+                 omega_bounds: Tuple[float, float] = (0.1, 0.9),
                  phi_p: float = 0.5,
                  phi_g: float = 0.5,
                  max_iter: int = 100,
-                 weight_decay: bool = True,
                  tolerance: float = 1e-6) -> Any:
         """Runs continuous PSO algorithm.
 
@@ -89,8 +89,9 @@ class CPSO(BasePSO):
             Additional keyword arguments passed to objective and constraint 
             functions.
  
-        omega : float
-            Particle velocity scaling factor.
+        omega_bounds : tuple
+            Particle velocity scaling factor lower and upper bounds. To obtain a 
+            constant scaling factor, set the omega_bounds to the same number
 
         phi_p : float
             Scaling factor to search away from the particle's best known 
@@ -102,15 +103,16 @@ class CPSO(BasePSO):
         max_iter : int
             The maximum number of iterations for the swarm to search.
 
-        weight_decay : bool
-            Whether to implement weight decay during optimization.
-
         tolerance : float
             Criteria for early stopping.
 
         Returns
         -------
-        TODO: ADD THIS!
+        gbest_x : 1d array-like
+            Swarm's best particle position
+            
+        gbest_o : float
+            Swarm's best objective function value
         """
         x: np.ndarray
         v: np.ndarray
@@ -130,6 +132,8 @@ class CPSO(BasePSO):
                     lambda func, x: list(map(func, x))
 
         # Create swarm
+        if self.verbose:
+            _LOGGER.info("initializing swarm")
         params = self._initialize_swarm(fobj=fobj,
                                         lb=lb,
                                         ub=ub,
@@ -153,16 +157,20 @@ class CPSO(BasePSO):
         mask_ub: np.ndarray
         idx: np.ndarray
         
-        it: int               = 1
-        size: Tuple[int, int] = (self.n_particles, self.n_dimensions) 
-        while it < max_iter:
+        it: int = 1
+        while it <= max_iter:
+
+            # Iteratively update omega
+            omega = omega_bounds[1] - \
+                it*((omega_bounds[1] - omega_bounds[0])/max_iter)
+            
             # Update particles' velocities
-            rp = self.rg.uniform(size=size)
-            rg = self.rg.uniform(size=size)
+            rp = self.rg.uniform(size=(self.n_particles, self.n_dimensions))
+            rg = self.rg.uniform(size=(self.n_particles, self.n_dimensions))
             v  = omega*v + phi_p*rp*(pbest_x - x) + phi_g*rg*(gbest_x - x)
             x += v
             
-            # Adjust based on bounds
+            # Adjust positions based on bounds
             mask_lb = x < self.lb
             mask_ub = x > self.ub
             x       = x*(~np.logical_or(mask_lb, mask_ub)) + \
@@ -180,27 +188,35 @@ class CPSO(BasePSO):
             # Update swarm's best results (if constraints are satisfied)
             i: int = np.argmin(pbest_o)
             if pbest_o[i] < gbest_o:
-                
                 # Check stopping criteria
                 ydiff = np.linalg.norm(gbest_o - pbest_o[i])
                 xdiff = np.linalg.norm(gbest_x - pbest_x[i])
                 ratio = ydiff/(xdiff + 1e-10)
-                if ratio < tolerance: break
+                if ratio < tolerance: 
+                    if self.verbose:
+                        _LOGGER.info("optimization converged: " + \
+                                     f"{it-1}/{max_iter} - stopping " + \
+                                     "criteria below tolerance")
+                    break
                 
                 # Stopping criteria not met so update gbest results
                 gbest_x = pbest_x[i].copy()
                 gbest_o = pbest_o[i]
 
-            # Do not skip this step!!
+                if self.verbose:
+                    _LOGGER.info(f"new swarm best: {it}/{max_iter} - {gbest_o}")
+
+            # Continue optimization
             it += 1
 
-        # Maximum iterations reached
-        # TODO: CONTINUE HERE
-        # print('Stopping search: maximum iterations reached --> {:}'.format(maxiter))
+        # Maximum iterations reached      
+        if self.verbose and it > max_iter:
+            _LOGGER.warn(f"optimization did not converge in {max_iter} " + \
+                         "iterations")      
+
+        # Check if solution is feasible based on constraints
+        if self.verbose and not c_fcons(gbest_x):
+            _LOGGER.warn("optimization could not find a feasible solution " + \
+                         "based on specified constraints")        
         
-        # if not is_feasible(g):
-        #     print("However, the optimization couldn't find a feasible design. Sorry")
-        # if particle_output:
-        #     return g, fg, p, fp
-        # else:
-        #     return g, fg
+        return gbest_x, gbest_o

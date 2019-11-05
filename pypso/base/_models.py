@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from functools import partial
+import logging
 from multiprocessing import cpu_count
 import numpy as np
 from numpy.random import Generator, PCG64
@@ -7,10 +8,10 @@ from typing import (Any, Callable, Dict, Iterable, List, NamedTuple, Optional,
                     Tuple, Union)
 
 # Package imports
-from ..utils.wrappers import Wrappers
-
+from ..utils.wrapper import Wrappers
 
 __all__ = ['BasePSO']
+_LOGGER = logging.getLogger(__name__)
 
 
 class BasePSO(ABC):
@@ -105,9 +106,10 @@ class BasePSO(ABC):
         Returns
         -------
         dict
-            ADD HERE
+            Key/value pairs with initialized parameters for optimization
         """
         # Basic error checking
+        msg: str
         self.lb: np.ndarray
         self.ub: np.ndarray
         if lb is None or ub is None:
@@ -116,19 +118,27 @@ class BasePSO(ABC):
         else:
             self.lb = np.array(lb)
             self.ub = np.array(ub)
-            assert len(self.lb) == len(self.ub), \
-                f"Lower- and upper-bounds must be the same length, " + \
-                f"got lb = {len(self.lb)} != ub = {len(self.ub)}"
+            if len(self.lb) != len(self.ub):
+                msg = f"Lower- and upper-bounds must be the same length, " + \
+                      f"got lb = {len(self.lb)} != ub = {len(self.ub)}"
+                _LOGGER.error(msg)
+                raise ValueError(msg)
             
-            assert np.all(self.ub > self.lb), \
-            "All upper-bound values must be > lower-bound values"
+            if not np.all(self.ub > self.lb):
+                msg = "All upper-bound values must be > lower-bound values"
+                _LOGGER.error(msg)
+                raise ValueError(msg)
 
-        assert hasattr(fobj, "__call__"), \
-            "Invalid function handle for fobj parameter"
+        if not hasattr(fobj, "__call__"):
+            msg = "Invalid function handle for fobj parameter"
+            _LOGGER.error(msg)
+            raise ValueError(msg)
 
         if fcons:
-            assert hasattr(fcons, "__call__"), \
-                "Invalid function handle for fcons parameter"
+            if not hasattr(fcons, "__call__"):
+                msg = "Invalid function handle for fcons parameter"
+                _LOGGER.error(msg)
+                raise ValueError(msg)
 
         # Bound velocities
         self.v_bounds: Tuple[float, float] = \
@@ -177,11 +187,10 @@ class BasePSO(ABC):
                  ub: Optional[Iterable[float]] = None,
                  fcons: Optional[Callable[..., Any]] = None,
                  kwargs: Dict[Any, Any] = {},
-                 omega: float = 0.5,
+                 omega_bounds: Tuple[float, float] = (0.1, 1.1),
                  phi_p: float = 0.5,
                  phi_g: float = 0.5,
                  max_iter: int = 100,
-                 weight_decay: bool = True,
                  tolerance: float = 1e-6) -> Any:
         """Runs PSO algorithm.
 
@@ -204,8 +213,8 @@ class BasePSO(ABC):
             Additional keyword arguments passed to objective and constraint 
             functions.
  
-        omega : float
-            Particle velocity scaling factor.
+        omega_bounds : tuple
+            Particle velocity scaling factor lower and upper bounds.
 
         phi_p : float
             Scaling factor to search away from the particle's best known 
@@ -217,14 +226,18 @@ class BasePSO(ABC):
         max_iter : int
             The maximum number of iterations for the swarm to search.
 
-        weight_decay : bool
-            Whether to implement weight decay during optimization.
+        omega_decay : bool
+            Whether to implement weight decay for omega during optimization.
 
         tolerance : float
             Criteria for early stopping.
 
         Returns
         -------
-        TODO: ADD THIS!
+        gbest_x : 1d array-like
+            Swarm's best particle position
+            
+        gbest_o : float
+            Swarm's best objective function value
         """
         pass
