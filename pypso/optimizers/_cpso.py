@@ -1,10 +1,11 @@
+from functools import partial
 import logging
-from multiprocessing import Pool
 import numpy as np
-from typing import Any, Callable, Dict, Iterable, Optional, Tuple
+from typing import Any, Callable, Dict, Iterable, Optional, Tuple, Union
 
 # Package imports
 from ..base import BasePSO
+from ..utils.wrapper import Wrappers
 
 __all__ = ['CPSO']
 _LOGGER = logging.getLogger(__name__)
@@ -57,10 +58,111 @@ class CPSO(BasePSO):
         """
         return "CPSO"
 
+    def _initialize_swarm(self, 
+                          fobj: Callable[..., float],
+                          lb: Union[np.ndarray, Iterable[float]],
+                          ub: Union[np.ndarray, Iterable[float]],
+                          fcons: Optional[Callable[..., Any]] = None, 
+                          kwargs: Dict[Any, Any] = {}) -> Dict[str, Any]:
+        """Initialize the swarm.
+    
+        Parameters
+        ----------
+        fobj : callable
+            Function to be minimized.
+
+        lb : iterable
+            The lower bounds of the solution.
+
+        ub : iterable
+            The upper bounds of the solution.
+
+        fcons : callable
+            Function for constraints that evaluates to >= in a successfully 
+            optimized problem.
+
+        kwargs : dict
+            Additional keyword arguments passed to objective and constraint 
+            functions.
+
+        Returns
+        -------
+        dict
+            Key/value pairs with initialized parameters for optimization
+        """
+        # Basic error checking
+        msg: str
+        
+        lb: np.ndarray = np.array(lb)
+        ub: np.ndarray = np.array(ub)
+
+        if len(lb) != len(ub):
+            msg = f"Lower- and upper-bounds must be the same length, " + \
+                    f"got lb = {len(lb)} != ub = {len(ub)}"
+            _LOGGER.error(msg)
+            raise ValueError(msg)
+        
+        if not np.all(ub > lb):
+            msg = "All upper-bound values must be > lower-bound values"
+            _LOGGER.error(msg)
+            raise ValueError(msg)
+
+        if not hasattr(fobj, "__call__"):
+            msg = "Invalid function handle for fobj parameter"
+            _LOGGER.error(msg)
+            raise ValueError(msg)
+
+        if fcons:
+            if not hasattr(fcons, "__call__"):
+                msg = "Invalid function handle for fcons parameter"
+                _LOGGER.error(msg)
+                raise ValueError(msg)
+
+        # Bound velocities
+        self.v_bounds: Tuple[float, float] = (-2, 2)
+        
+        # Curry objective and constraint functions
+        T          = Callable[[Iterable[float]], float]
+        c_fobj: T  = partial(Wrappers.fobj_wrapper, fobj, kwargs)
+        func: T    = Wrappers.fcons_none_wrapper if not fcons else \
+                        partial(Wrappers.fcons_wrapper, fcons, kwargs)
+        c_fcons: T = partial(Wrappers.is_feasible_wrapper, func)
+
+        # Initialize particle's positions, velocities, and evaluate
+        pts: np.ndarray = \
+            self.rg.uniform(size=(self.n_particles, self.n_dimensions))
+        x: np.ndarray   = lb + pts * (ub - lb)
+        v: np.ndarray   = self.v_bounds[0] + \
+                            pts * (self.v_bounds[1] - self.v_bounds[0])
+        
+        o: np.ndarray   = self.mapper(c_fobj, x)
+        f: np.ndarray   = self.mapper(c_fcons, x)
+
+        # Initialize results for each particle's best results and swarm's best
+        # results
+        pbest_x: np.ndarray = np.zeros_like(x)
+        pbest_o: np.ndarray = np.ones(self.n_particles) * np.inf
+
+        gbest_x: np.ndarray = np.zeros_like(x)
+        gbest_o: float      = np.inf
+
+        return {
+            'x'       : x,
+            'lb'      : lb,
+            'ub'      : ub,
+            'v'       : v,
+            'pbest_x' : pbest_x,
+            'pbest_o' : pbest_o,
+            'gbest_x' : gbest_x,
+            'gbest_o' : gbest_o,
+            'c_fobj'  : c_fobj,
+            'c_fcons' : c_fcons
+        }
+
     def optimize(self, 
                  fobj: Callable[..., float],
-                 lb: Optional[Iterable[float]] = None,
-                 ub: Optional[Iterable[float]] = None,
+                 lb: Union[np.ndarray, Iterable[float]],
+                 ub: Union[np.ndarray, Iterable[float]],
                  fcons: Optional[Callable[..., Any]] = None,
                  kwargs: Dict[Any, Any] = {},
                  omega_bounds: Tuple[float, float] = (0.1, 0.9),
@@ -109,10 +211,10 @@ class CPSO(BasePSO):
         Returns
         -------
         gbest_x : 1d array-like
-            Swarm's best particle position
+            Swarm's best particle position.
             
         gbest_o : float
-            Swarm's best objective function value
+            Swarm's best objective function value.
         """
         x: np.ndarray
         v: np.ndarray
@@ -126,10 +228,6 @@ class CPSO(BasePSO):
         c_obj: Callable[[Iterable[float]], float]
         c_fcons: Callable[[Iterable[float]], float]
         params: Dict[str, Any]
-        
-        # Define function mapper
-        mapper = Pool(self.n_jobs).map if self.n_jobs > 1 else \
-                    lambda func, x: list(map(func, x))
 
         # Create swarm
         if self.verbose:
@@ -140,6 +238,8 @@ class CPSO(BasePSO):
                                         fcons=fcons,
                                         kwargs=kwargs)
         x       = params.pop('x')
+        lb      = params.pop('lb')
+        ub      = params.pop('ub')
         v       = params.pop('v')
         pbest_x = params.pop('pbest_x')
         pbest_o = params.pop('pbest_o')
@@ -168,31 +268,46 @@ class CPSO(BasePSO):
             rp = self.rg.uniform(size=(self.n_particles, self.n_dimensions))
             rg = self.rg.uniform(size=(self.n_particles, self.n_dimensions))
             v  = omega*v + phi_p*rp*(pbest_x - x) + phi_g*rg*(gbest_x - x)
-            x += v
+
+            # Adjust velocities based on bounds
+            mask_lb = v < self.v_bounds[0]
+            mask_ub = v > self.v_bounds[1]
+            v       = v*(~np.logical_or(mask_lb, mask_ub)) + \
+                        self.v_bounds[0]*mask_lb + self.v_bounds[1]*mask_ub
             
-            # Adjust positions based on bounds
-            mask_lb = x < self.lb
-            mask_ub = x > self.ub
-            x       = x*(~np.logical_or(mask_lb, mask_ub)) + \
-                        self.lb*mask_lb + self.ub*mask_ub
+            # Update particles' positions
+            x += v
+
+            # Adjust particles' positions based on bounds
+            mask_lb  = x < lb
+            mask_ub  = x > ub
+            x        = x*(~np.logical_or(mask_lb, mask_ub)) + \
+                        lb*mask_lb + ub*mask_ub
 
             # Update objectives and constraints
-            o = np.array(mapper(c_fobj, x))
-            f = np.array(mapper(c_fcons, x))
+            o = self.mapper(c_fobj, x)
+            f = self.mapper(c_fcons, x)
 
             # Update particles' best results (if constraints are satisfied)
             idx          = np.logical_and((o < pbest_o), f)
             pbest_x[idx] = x[idx].copy()
             pbest_o[idx] = o[idx]
 
+            # If objective function already at 0, early stop
+            if gbest_o == 0:
+                if self.verbose:
+                    _LOGGER.info("optimization converged: " + \
+                                    f"{it-1}/{max_iter} - stopping " + \
+                                    "criteria below tolerance")
+                break
+
             # Update swarm's best results (if constraints are satisfied)
             i: int = np.argmin(pbest_o)
             if pbest_o[i] < gbest_o:
+
                 # Check stopping criteria
-                ydiff = np.linalg.norm(gbest_o - pbest_o[i])
-                xdiff = np.linalg.norm(gbest_x - pbest_x[i])
-                ratio = ydiff/(xdiff + 1e-10)
-                if ratio < tolerance: 
+                diff = np.linalg.norm(gbest_o - pbest_o[i])
+                if diff < tolerance: 
                     if self.verbose:
                         _LOGGER.info("optimization converged: " + \
                                      f"{it-1}/{max_iter} - stopping " + \

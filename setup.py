@@ -5,6 +5,7 @@ import io
 from os.path import abspath, dirname, join
 from pathlib import Path
 from setuptools import find_packages, setup
+import versioneer
 
 # Package meta-data
 NAME            = 'pypso'
@@ -38,7 +39,8 @@ with open(PACKAGE_DIR / 'VERSION') as f:
 # Run setup
 setup(
     name                          = NAME,
-    version                       = about['__version__'],
+    version                       = versioneer.get_version(),
+    cmdclass                      = versioneer.get_cmdclass(),
     description                   = DESCRIPTION,
     long_description              = long_description,
     long_description_content_type = 'text/markdown',

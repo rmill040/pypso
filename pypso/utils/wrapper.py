@@ -48,7 +48,7 @@ class Wrappers:
         1d array-like
             Array with status of each constraint evaluated on provided solution.
         """
-        return np.all(func(x) > 0.0)
+        return np.all(func(x).astype(float) > 0.0)
 
     @staticmethod
     def fcons_none_wrapper(x: Iterable[float]) -> Any:

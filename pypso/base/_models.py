@@ -1,14 +1,9 @@
 from abc import ABC, abstractmethod
-from functools import partial
 import logging
-from multiprocessing import cpu_count
+from multiprocessing import cpu_count, Pool
 import numpy as np
 from numpy.random import Generator, PCG64
-from typing import (Any, Callable, Dict, Iterable, List, NamedTuple, Optional, 
-                    Tuple, Union)
-
-# Package imports
-from ..utils.wrapper import Wrappers
+from typing import (Any, Callable, Dict, Iterable, List, Optional, Tuple, Union)
 
 __all__ = ['BasePSO']
 _LOGGER = logging.getLogger(__name__)
@@ -61,6 +56,11 @@ class BasePSO(ABC):
             if n_jobs < 0: n_jobs = list(range(1, cpu_count()+1))[n_jobs]
         self.n_jobs: int = n_jobs
 
+        # Define function mapper
+        map_func    = Pool(self.n_jobs).map if self.n_jobs > 1 else \
+                            lambda func, x: list(map(func, x))
+        self.mapper = lambda f, x: np.array(map_func(f, x))
+
     @abstractmethod
     def __str__(self) -> str:
         """Returns name of class.
@@ -78,8 +78,8 @@ class BasePSO(ABC):
 
     def _initialize_swarm(self, 
                           fobj: Callable[..., float],
-                          lb: Optional[Iterable[float]] = None,
-                          ub: Optional[Iterable[float]] = None,
+                          lb: Union[np.ndarray, Iterable[float]],
+                          ub: Union[np.ndarray, Iterable[float]],
                           fcons: Optional[Callable[..., Any]] = None, 
                           kwargs: Dict[Any, Any] = {}) -> Dict[str, Any]:
         """Initialize the swarm.
@@ -108,83 +108,13 @@ class BasePSO(ABC):
         dict
             Key/value pairs with initialized parameters for optimization
         """
-        # Basic error checking
-        msg: str
-        self.lb: np.ndarray
-        self.ub: np.ndarray
-        if lb is None or ub is None:
-            self.lb = np.repeat(-np.inf, self.n_dimensions)
-            self.ub = np.repeat(np.inf, self.n_dimensions)
-        else:
-            self.lb = np.array(lb)
-            self.ub = np.array(ub)
-            if len(self.lb) != len(self.ub):
-                msg = f"Lower- and upper-bounds must be the same length, " + \
-                      f"got lb = {len(self.lb)} != ub = {len(self.ub)}"
-                _LOGGER.error(msg)
-                raise ValueError(msg)
-            
-            if not np.all(self.ub > self.lb):
-                msg = "All upper-bound values must be > lower-bound values"
-                _LOGGER.error(msg)
-                raise ValueError(msg)
-
-        if not hasattr(fobj, "__call__"):
-            msg = "Invalid function handle for fobj parameter"
-            _LOGGER.error(msg)
-            raise ValueError(msg)
-
-        if fcons:
-            if not hasattr(fcons, "__call__"):
-                msg = "Invalid function handle for fcons parameter"
-                _LOGGER.error(msg)
-                raise ValueError(msg)
-
-        # Bound velocities
-        self.v_bounds: Tuple[float, float] = \
-            (self.lb - self.ub, self.ub - self.lb)
-
-        # Curry objective and constraint functions
-        T          = Callable[[Iterable[float]], float]
-        c_fobj: T  = partial(Wrappers.fobj_wrapper, fobj, kwargs)
-        func: T    = Wrappers.fcons_none_wrapper if not fcons else \
-                        partial(Wrappers.fcons_wrapper, fcons, kwargs)
-        c_fcons: T = partial(Wrappers.is_feasible_wrapper, func)
-
-        # Initialize particle's positions, velocities, and evaluate
-        pts: np.ndarray = \
-            self.rg.uniform(size=(self.n_particles, self.n_dimensions))
-        x: np.ndarray   = self.lb + pts * (self.ub - self.lb)
-        v: np.ndarray   = self.v_bounds[0] + \
-                            pts * (self.v_bounds[1] - self.v_bounds[0])
-        
-        o: np.ndarray = np.array(list(map(c_fobj, x)))
-        f: np.ndarray = np.array(list(map(c_fcons, x)))
-
-        # Initialize results for each particle's best results and swarm's best
-        # results
-        pbest_x: np.ndarray = np.zeros_like(x)
-        pbest_o: np.ndarray = np.ones(self.n_particles) * np.inf
-
-        gbest_x: np.ndarray = np.zeros_like(x)
-        gbest_o: float      = np.inf
-
-        return {
-            'x'       : x,
-            'v'       : v,
-            'pbest_x' : pbest_x,
-            'pbest_o' : pbest_o,
-            'gbest_x' : gbest_x,
-            'gbest_o' : gbest_o,
-            'c_fobj'  : c_fobj,
-            'c_fcons' : c_fcons
-        }
+        pass
 
     @abstractmethod
     def optimize(self, 
                  fobj: Callable[..., float],
-                 lb: Optional[Iterable[float]] = None,
-                 ub: Optional[Iterable[float]] = None,
+                 lb: Union[np.ndarray, Iterable[float]],
+                 ub: Union[np.ndarray, Iterable[float]],
                  fcons: Optional[Callable[..., Any]] = None,
                  kwargs: Dict[Any, Any] = {},
                  omega_bounds: Tuple[float, float] = (0.1, 1.1),
@@ -235,9 +165,9 @@ class BasePSO(ABC):
         Returns
         -------
         gbest_x : 1d array-like
-            Swarm's best particle position
-            
+            Swarm's best particle position.
+
         gbest_o : float
-            Swarm's best objective function value
+            Swarm's best objective function value.
         """
         pass
