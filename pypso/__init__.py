@@ -1,17 +1,15 @@
 import logging
-from os.path import join
-from pathlib import Path
+import re
 from typing import Any
-
-# Package imports
-import pypso
+from ._version import get_versions
 
 # Create custom console logger
-FORMAT: str = '[%(asctime)s] %(levelname)s - %(message)s'
-logging.basicConfig(level=logging.INFO, format=FORMAT)
+logging.basicConfig(
+    level=logging.INFO, 
+    format='[%(asctime)s] %(levelname)s - %(message)s'
+    )
 logger: Any = logging.getLogger(__name__)
 
-# # Read VERSION file and import on module load
-# root = Path(pypso.__file__).resolve().parent
-# with open(join(root, 'VERSION')) as version_file:
-#     __version__ = version_file.read().strip()
+# Define version
+__version__ = re.findall("\d+\.\d+\.\d+", get_versions()['version'])[0]
+del get_versions

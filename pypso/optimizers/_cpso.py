@@ -5,7 +5,7 @@ from typing import Any, Callable, Dict, Iterable, Optional, Tuple, Union
 
 # Package imports
 from ..base import BasePSO
-from ..utils.wrapper import Wrappers
+from ..utils import Wrappers
 
 __all__ = ['CPSO']
 _LOGGER = logging.getLogger(__name__)
@@ -135,8 +135,8 @@ class CPSO(BasePSO):
         v: np.ndarray   = self.v_bounds[0] + \
                             pts * (self.v_bounds[1] - self.v_bounds[0])
         
-        o: np.ndarray   = self.mapper(c_fobj, x)
-        f: np.ndarray   = self.mapper(c_fcons, x)
+        o: np.ndarray   = self._mapper(c_fobj, x)
+        f: np.ndarray   = self._mapper(c_fcons, x)
 
         # Initialize results for each particle's best results and swarm's best
         # results
@@ -230,8 +230,7 @@ class CPSO(BasePSO):
         params: Dict[str, Any]
 
         # Create swarm
-        if self.verbose:
-            _LOGGER.info("initializing swarm")
+        if self.verbose: _LOGGER.info("initializing swarm")
         params = self._initialize_swarm(fobj=fobj,
                                         lb=lb,
                                         ub=ub,
@@ -285,8 +284,8 @@ class CPSO(BasePSO):
                         lb*mask_lb + ub*mask_ub
 
             # Update objectives and constraints
-            o = self.mapper(c_fobj, x)
-            f = self.mapper(c_fcons, x)
+            o = self._mapper(c_fobj, x)
+            f = self._mapper(c_fcons, x)
 
             # Update particles' best results (if constraints are satisfied)
             idx          = np.logical_and((o < pbest_o), f)
@@ -322,6 +321,7 @@ class CPSO(BasePSO):
                     _LOGGER.info(f"new swarm best: {it}/{max_iter} - {gbest_o}")
 
             # Continue optimization
+            self.history.append(gbest_o)
             it += 1
 
         # Maximum iterations reached      

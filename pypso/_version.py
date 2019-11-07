@@ -42,7 +42,7 @@ def get_config():
     cfg.VCS = "git"
     cfg.style = "pep440-post"
     cfg.tag_prefix = "v"
-    cfg.parentdir_prefix = "None"
+    cfg.parentdir_prefix = "pypso-"
     cfg.versionfile_source = "pypso/_version.py"
     cfg.verbose = False
     return cfg
