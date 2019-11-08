@@ -3,7 +3,7 @@ import logging
 from multiprocessing import cpu_count, Pool
 import numpy as np
 from numpy.random import Generator, PCG64
-from typing import Any, Callable, Dict, Iterable, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 
 __all__ = ['BasePSO']
 _LOGGER = logging.getLogger(__name__)
@@ -57,12 +57,12 @@ class BasePSO(ABC):
         self.n_jobs: int = n_jobs
 
         # Define function mapper
-        map_func     = Pool(self.n_jobs).map if self.n_jobs > 1 else \
-                            lambda func, x: list(map(func, x))
-        self._mapper = lambda f, x: np.array(map_func(f, x))
+        map_func: Any     = Pool(self.n_jobs).map if self.n_jobs > 1 else \
+                            lambda func, x: list(map(func, x))  # type: ignore
+        self._mapper: Any = lambda f, x: np.array(map_func(f, x))
 
         # Hold history of swarm results
-        self.history = []
+        self.history: List[Any] = []
 
     @abstractmethod
     def __str__(self) -> str:

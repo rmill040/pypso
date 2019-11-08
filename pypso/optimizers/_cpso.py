@@ -44,7 +44,7 @@ class CPSO(BasePSO):
                          n_jobs=n_jobs,
                          random_state=random_state)
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Returns name of class.
         
         Parameters
@@ -93,8 +93,8 @@ class CPSO(BasePSO):
         # Basic error checking
         msg: str
         
-        lb: np.ndarray = np.array(lb)
-        ub: np.ndarray = np.array(ub)
+        lb = np.array(lb)
+        ub = np.array(ub)
 
         if len(lb) != len(ub):
             msg = f"Lower- and upper-bounds must be the same length, " + \
@@ -122,11 +122,11 @@ class CPSO(BasePSO):
         self.v_bounds: Tuple[float, float] = (-2, 2)
         
         # Curry objective and constraint functions
-        T          = Callable[[Iterable[float]], float]
-        c_fobj: T  = partial(Wrappers.fobj_wrapper, fobj, kwargs)
-        func: T    = Wrappers.fcons_none_wrapper if not fcons else \
+        T            = Callable[[Iterable[float]], float]
+        c_fobj: T    = partial(Wrappers.fobj_wrapper, fobj, kwargs)
+        func: object = Wrappers.fcons_none_wrapper if not fcons else \
                         partial(Wrappers.fcons_wrapper, fcons, kwargs)
-        c_fcons: T = partial(Wrappers.is_feasible_wrapper, func)
+        c_fcons: T   = partial(Wrappers.is_feasible_wrapper, func)
 
         # Initialize particle's positions and velocities
         pts: np.ndarray = \

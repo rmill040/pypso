@@ -28,7 +28,7 @@ except FileNotFoundError:
     long_description = DESCRIPTION
 
 # Define scripts
-scripts = ["scripts/pso_version"]
+scripts = ["scripts/pypso_version"]
 
 # Run setup
 setup(
