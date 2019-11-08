@@ -1,4 +1,9 @@
+coverage
+flake8
 matplotlib
+mypy
 numpy
 pandas
+pytest
+pytest-cov
 scikit-learn

@@ -56,7 +56,7 @@ class BPSO(BasePSO):
         str
             Name of class.
         """
-        return "CPSO"
+        return "BPSO"
 
     def _initialize_swarm(self, 
                           fobj: Callable[..., float],
@@ -133,15 +133,12 @@ class BPSO(BasePSO):
                         partial(Wrappers.fcons_wrapper, fcons, kwargs)
         c_fcons: T = partial(Wrappers.is_feasible_wrapper, func)
 
-        # Initialize particle's positions, velocities, and evaluate
+        # Initialize particle's positions and velocities
         pts: np.ndarray = \
             self.rg.uniform(size=(self.n_particles, self.n_dimensions))
         x: np.ndarray   = np.round(lb + pts * (ub - lb))
         v: np.ndarray   = self.v_bounds[0] + \
                             pts * (self.v_bounds[1] - self.v_bounds[0])
-        
-        o: np.ndarray   = self._mapper(c_fobj, x)
-        f: np.ndarray   = self._mapper(c_fcons, x)
 
         # Initialize results for each particle's best results and swarm's best
         # results
@@ -296,8 +293,8 @@ class BPSO(BasePSO):
             # If objective function already at 0, early stop
             if gbest_o == 0:
                 if self.verbose:
-                    _LOGGER.info("optimization converged: " + \
-                                    f"{it-1}/{max_iter} - stopping " + \
+                    _LOGGER.info("optimization converged: " + 
+                                    f"{it-1}/{max_iter} - stopping " + 
                                     "criteria below tolerance")
                 break
 
@@ -308,8 +305,8 @@ class BPSO(BasePSO):
                 diff = np.linalg.norm(gbest_o - pbest_o[i])
                 if diff < tolerance: 
                     if self.verbose:
-                        _LOGGER.info("optimization converged: " + \
-                                     f"{it-1}/{max_iter} - stopping " + \
+                        _LOGGER.info("optimization converged: " + 
+                                     f"{it-1}/{max_iter} - stopping " + 
                                      "criteria below tolerance")
                     break                    
                 
@@ -326,12 +323,12 @@ class BPSO(BasePSO):
 
         # Maximum iterations reached      
         if self.verbose and it > max_iter:
-            _LOGGER.warn(f"optimization did not converge in {max_iter} " + \
+            _LOGGER.warn(f"optimization did not converge in {max_iter} " + 
                          "iterations")      
 
         # Check if solution is feasible based on constraints
         if self.verbose and not c_fcons(gbest_x):
-            _LOGGER.warn("optimization could not find a feasible solution " + \
+            _LOGGER.warn("optimization could not find a feasible solution " + 
                          "based on specified constraints")        
         
         return gbest_x, gbest_o

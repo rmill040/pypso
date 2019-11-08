@@ -1,0 +1,12 @@
+[run]
+branch = False
+source = pypso
+
+[report]
+omit =
+    *tests*
+    *__init__.py
+    *_version.py
+
+exclude_lines =
+    if __name__ == '__main__':

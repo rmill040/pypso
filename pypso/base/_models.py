@@ -3,7 +3,7 @@ import logging
 from multiprocessing import cpu_count, Pool
 import numpy as np
 from numpy.random import Generator, PCG64
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Iterable, Optional, Tuple, Union
 
 __all__ = ['BasePSO']
 _LOGGER = logging.getLogger(__name__)

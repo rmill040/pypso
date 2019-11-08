@@ -1,0 +1,13 @@
+#!/usr/bin/env python
+
+def main():
+    """Sample script.
+    """
+    try:
+        import pypso
+        print(f"pypso version = {pypso.__version__} successfully imported!")
+    except ImportError as e:
+        print(f"pypso not installed correctly")
+
+if __name__ == "__main__":
+    main()

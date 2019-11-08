@@ -98,7 +98,7 @@ class CPSO(BasePSO):
 
         if len(lb) != len(ub):
             msg = f"Lower- and upper-bounds must be the same length, " + \
-                    f"got lb = {len(lb)} != ub = {len(ub)}"
+                  f"got lb = {len(lb)} != ub = {len(ub)}"
             _LOGGER.error(msg)
             raise ValueError(msg)
         
@@ -128,15 +128,12 @@ class CPSO(BasePSO):
                         partial(Wrappers.fcons_wrapper, fcons, kwargs)
         c_fcons: T = partial(Wrappers.is_feasible_wrapper, func)
 
-        # Initialize particle's positions, velocities, and evaluate
+        # Initialize particle's positions and velocities
         pts: np.ndarray = \
             self.rg.uniform(size=(self.n_particles, self.n_dimensions))
         x: np.ndarray   = lb + pts * (ub - lb)
         v: np.ndarray   = self.v_bounds[0] + \
                             pts * (self.v_bounds[1] - self.v_bounds[0])
-        
-        o: np.ndarray   = self._mapper(c_fobj, x)
-        f: np.ndarray   = self._mapper(c_fcons, x)
 
         # Initialize results for each particle's best results and swarm's best
         # results
@@ -295,9 +292,9 @@ class CPSO(BasePSO):
             # If objective function already at 0, early stop
             if gbest_o == 0:
                 if self.verbose:
-                    _LOGGER.info("optimization converged: " + \
-                                    f"{it-1}/{max_iter} - stopping " + \
-                                    "criteria below tolerance")
+                    _LOGGER.info("optimization converged: " + 
+                                 f"{it-1}/{max_iter} - stopping " + 
+                                 "criteria below tolerance")
                 break
 
             # Update swarm's best results (if constraints are satisfied)
@@ -308,8 +305,8 @@ class CPSO(BasePSO):
                 diff = np.linalg.norm(gbest_o - pbest_o[i])
                 if diff < tolerance: 
                     if self.verbose:
-                        _LOGGER.info("optimization converged: " + \
-                                     f"{it-1}/{max_iter} - stopping " + \
+                        _LOGGER.info("optimization converged: " + 
+                                     f"{it-1}/{max_iter} - stopping " + 
                                      "criteria below tolerance")
                     break
                 
@@ -326,12 +323,12 @@ class CPSO(BasePSO):
 
         # Maximum iterations reached      
         if self.verbose and it > max_iter:
-            _LOGGER.warn(f"optimization did not converge in {max_iter} " + \
+            _LOGGER.warn(f"optimization did not converge in {max_iter} " + 
                          "iterations")      
 
         # Check if solution is feasible based on constraints
         if self.verbose and not c_fcons(gbest_x):
-            _LOGGER.warn("optimization could not find a feasible solution " + \
+            _LOGGER.warn("optimization could not find a feasible solution " + 
                          "based on specified constraints")        
         
         return gbest_x, gbest_o

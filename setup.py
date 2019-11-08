@@ -27,6 +27,9 @@ try:
 except FileNotFoundError:
     long_description = DESCRIPTION
 
+# Define scripts
+scripts = ["scripts/pso_version"]
+
 # Run setup
 setup(
     name                          = NAME,
@@ -39,7 +42,8 @@ setup(
     author_email                  = EMAIL,
     python_requires               = REQUIRES_PYTHON,
     url                           = URL,
-    packages                      = find_packages(exclude=('tests',)),
+    packages                      = find_packages(exclude=['tests']),
+    scripts                       = scripts,
     package_data                  = {},
     install_requires              = list_reqs(),
     extras_require                = {},
@@ -51,8 +55,6 @@ setup(
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: Implementation :: CPython',
-        'Programming Language :: Python :: Implementation :: PyPy'
+        'Programming Language :: Python :: Implementation :: CPython'
     ],
 )

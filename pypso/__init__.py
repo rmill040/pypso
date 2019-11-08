@@ -11,5 +11,5 @@ logging.basicConfig(
 logger: Any = logging.getLogger(__name__)
 
 # Define version
-__version__ = re.findall("\d+\.\d+\.\d+", get_versions()['version'])[0]
+__version__ = re.findall(r"\d+\.\d+\.\d+", get_versions()['version'])[0]
 del get_versions
