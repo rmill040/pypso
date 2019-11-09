@@ -3,7 +3,6 @@
 `pypso` is a Python package that provides naive implementations of classic [particle swarm optimization](https://en.wikipedia.org/wiki/Particle_swarm_optimization) algorithms. The purpose of this project is to demonstrate one of the many ways to create a reusable library for scientific computing. This library demonstrates some common development tools and practices for working with Python, including:
 - Version control
 - Unit tests and code coverage
-- Code coverage
 - Static typing
 - Linting
 
@@ -30,6 +29,44 @@ After install if you run the script `pypso_version`, you should get a similar me
 ```
 pypso_version
 pypso version = 0.0.2 successfully imported!
+```
+To see some applications of particle swarm optimization for machine learning applications, run the `examples/simple_ml.py` script. See partial output below,
+```
+--------------------------------------------------
+EXAMPLE 1 - CONTINUOUS PSO WITHOUT CONSTRAINT
+--------------------------------------------------
+[2019-11-08 19:35:24,612] INFO - initializing swarm
+[2019-11-08 19:35:24,762] INFO - new swarm best: 1/100 - 0.016674594366048234
+[2019-11-08 19:35:24,894] INFO - new swarm best: 2/100 - 0.013860261085566372
+[2019-11-08 19:35:25,026] INFO - new swarm best: 3/100 - 0.011204481792717158
+[2019-11-08 19:35:25,164] INFO - new swarm best: 4/100 - 0.009896411394746618
+[2019-11-08 19:35:25,296] INFO - new swarm best: 5/100 - 0.008297658686115983
+[2019-11-08 19:35:25,557] INFO - new swarm best: 7/100 - 0.007901273717034085
+[2019-11-08 19:35:25,950] INFO - new swarm best: 10/100 - 0.007663442735584836
+[2019-11-08 19:35:26,475] INFO - new swarm best: 14/100 - 0.007438824586438297
+[2019-11-08 19:35:26,611] INFO - new swarm best: 15/100 - 0.007399186089530163
+[2019-11-08 19:35:27,001] INFO - new swarm best: 18/100 - 0.007240632101897404
+[2019-11-08 19:35:27,284] INFO - new swarm best: 20/100 - 0.007227419269594582
+[2019-11-08 19:35:27,802] INFO - new swarm best: 24/100 - 0.007121716611172779
+[2019-11-08 19:35:28,200] INFO - new swarm best: 27/100 - 0.007108503778869957
+[2019-11-08 19:35:28,459] INFO - new swarm best: 29/100 - 0.007095290946567356
+[2019-11-08 19:35:28,721] INFO - optimization converged: 30/100 - stopping criteria below tolerance
+
+Linear solution:
+0.23 + -1.9*f1 + -0.19*f2 + -1.4*f3 + 0.24*f4 +
+-1.08*f5 + -2.03*f6 + -2.38*f7 + -1.94*f8 + 0.11*f9 +
+-0.54*f10 + -1.87*f11 + 2.19*f12 + -1.68*f13 + -0.38*f14 +
+-1.05*f15 + -2.39*f16 + 0.98*f17 + -0.35*f18 + 0.9*f19 +
+-1.46*f20 + 0.48*f21 + -1.85*f22 + -0.74*f23 + -0.12*f24 +
+0.27*f25 + -2.42*f26 + -1.68*f27 + 1.66*f28 + -1.81*f29 +
+0.47*f30
+
+Sanity check:
+	all weights within bounds? True
+
+Comparison to sklearn:
+	sklearn logistic regression AUC = 0.978
+	PSO logistic regression AUC     = 0.9929
 ```
 
 ## Package Structure

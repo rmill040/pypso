@@ -127,7 +127,7 @@ def main():
         if (i + 1) % 5 == 0: sol += "\n"
         sol += f"{weights[i+1]}*{names[i]}"
         if i < X.shape[1]-1: sol += " + "
-    print(f"\nLinear Solution:\n{sol}")
+    print(f"\nLinear solution:\n{sol}")
 
     # Sanity check
     print("\nSanity check:")
@@ -156,7 +156,7 @@ def main():
         if (i + 1) % 5 == 0: sol += "\n"
         sol += f"{weights[i+1]}*{names[i]}"
         if i < X.shape[1]-1: sol += " + "
-    print(f"\nLinear Solution:\n{sol}")
+    print(f"\nLinear solution:\n{sol}")
 
     print("\nSanity check:")
     status = np.all((np.array(lb) < w_opt) & (w_opt < np.array(ub)))
